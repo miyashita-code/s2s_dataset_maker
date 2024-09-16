@@ -96,3 +96,8 @@ Speech to Speechの日本語のデータセットを作成するツールです�
     Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
     ```
 - このREADMEは, GPT-4oを使用して作成されました。
+
+## Reference
+- ITO Corpus: https://github.com/mmorise/ita-corpus
+- VoiceAssistant-400K: https://huggingface.co/datasets/gpt-omni/VoiceAssistant-400K
+- Style-Bert-VITS2: https://github.com/litagin02/Style-Bert-VITS2
