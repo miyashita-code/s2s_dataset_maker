@@ -1,123 +1,154 @@
 import json
+import os
 import random
 import requests
-import os
 
-import dotenv
+from dotenv import load_dotenv
+
 
 class VoiceSynthesizer:
     """
-    音声合成を行うためのクラス。
+    A class to perform text-to-speech synthesis using the Style-Bert-VITS2 API.
 
-    このクラスは、指定されたテキストを音声に変換し、指定されたパスに保存します。
-    使用するモデルは、初期化時に読み込まれ、指定のモデルまたはランダムに選択されます。
-    テキストが100文字を超える場合、自動的に分割して合成します。
+    This class converts given text into speech and saves it to a specified path.
+    It loads available models during initialization and allows selection of a specific
+    model or a random model for synthesis. If the text exceeds 100 characters, it
+    automatically splits the text before synthesis.
     """
 
     def __init__(self, is_debug: bool = False):
         """
-        VoiceSynthesizerの初期化メソッド。
+        Initialize the VoiceSynthesizer.
 
-        - `model_list.json`から利用可能なモデルを読み込みます。
-        - 環境変数からAPIのベースURLを取得します。
+        Loads the available models from 'model_list.json' and retrieves model information
+        from the API. Also loads the base URL from environment variables.
+
+        Args:
+            is_debug (bool): Enable debug mode if True. Default is False.
+
+        Raises:
+            EnvironmentError: If the API base URL is not set in environment variables.
+            Exception: If a specified model does not exist or the server is not ready.
         """
         self.is_debug = is_debug
 
-        # 環境変数の読み込み
-        dotenv.load_dotenv()
+        # Load environment variables
+        load_dotenv()
 
-        # 環境変数からAPIのベースURLを取得
-        self.url = os.getenv("STYLE_BERT_VITS2_API_LOCAL_URL")
-        self.voice_synthesizer_url = self.url + "/voice"
-        self.doc_url = self.url + "/docs"
-        self.models_info_url = self.url + "/models/info"
+        # Get API base URL from environment variable
+        base_url = os.getenv("STYLE_BERT_VITS2_API_LOCAL_URL")
+        if base_url is None:
+            raise EnvironmentError("Environment variable 'STYLE_BERT_VITS2_API_LOCAL_URL' is not set.")
+
+        self.voice_synthesizer_url = f"{base_url}/voice"
+        self.doc_url = f"{base_url}/docs"
+        self.models_info_url = f"{base_url}/models/info"
         self.models_name_map = {}
 
-        # モデルリストの読み込み
+        # Load model list from JSON file
         with open("scripts/synthesis/model_list.json", "r", encoding="utf-8") as f:
             model_names = json.load(f)["models"]
-            self._debug_print(f"<VoiceSynthesizer.__init__> models: {model_names}")
+            self._debug_print(f"Available models: {model_names}")
 
-            model_infos = self.__get_models_info()
+        # Get model information from API
+        model_infos = self._get_models_info()
 
-            for model_name in model_names:
-                model_id = self.__find_model_id(model_infos, model_name)
+        # Map model names to their IDs
+        for model_name in model_names:
+            model_id = self._find_model_id(model_infos, model_name)
 
-                if model_id is None:
-                    raise Exception(f"モデル '{model_name}' が存在しません。")
+            if model_id is None:
+                raise Exception(f"Model '{model_name}' does not exist.")
 
-                self._debug_print(f"<VoiceSynthesizer.__init__> model_id: {model_id}")
-                self.models_name_map[model_name] = model_id
+            self._debug_print(f"Model '{model_name}' has ID: {model_id}")
+            self.models_name_map[model_name] = model_id
 
-        self.check_is_server_ready()
+        # Check if the server is ready
+        self.check_server_ready()
 
-    def synthesize(self, text: str, save_path: str, model: str = None, isRandom: bool = False):
+    def synthesize(self, text: str, save_path: str, model: str = None, is_random: bool = False):
         """
-        テキストを音声に合成し、指定されたパスに保存します。
+        Synthesize speech from text and save it to a specified path.
 
         Args:
-            text (str): 読み上げ対象のテキスト。
-            save_path (str): 合成された音声ファイルの保存先パス。
-            model (str, optional): 使用するモデルの名前。指定がない場合はデフォルトモデルを使用。
-            isRandom (bool, optional): Trueの場合、利用可能なモデルからランダムに選択します。
+            text (str): The text to be synthesized.
+            save_path (str): The file path where the synthesized audio will be saved.
+            model (str, optional): The model name to use for synthesis. If not specified, the default model is used.
+            is_random (bool, optional): If True, select a random model from available models.
 
         Raises:
-            ValueError: 指定されたモデルが存在しない場合。
-            Exception: API呼び出し時にエラーが発生した場合。
+            ValueError: If the specified model does not exist.
+            Exception: If an error occurs during API calls.
         """
-        self._debug_print(f"<VoiceSynthesizer.synthesize> called, text: {text}, save_path: {save_path}, model: {model}, isRandom: {isRandom}")
+        self._debug_print(
+            f"Synthesize called with text: '{text}', save_path: '{save_path}', model: '{model}', is_random: {is_random}"
+        )
 
-        # モデルの選択
+        # Select the model
         if model:
             if model not in self.models_name_map:
-                raise ValueError(f"モデル '{model}' が存在しません。")
+                raise ValueError(f"Model '{model}' does not exist.")
             selected_model = model
-        elif isRandom:
+        elif is_random:
             selected_model = random.choice(list(self.models_name_map.keys()))
+            self._debug_print(f"Randomly selected model: {selected_model}")
         else:
-            selected_model = list(self.models_name_map.keys())[0]  # デフォルトモデル
+            selected_model = list(self.models_name_map.keys())[0]  # Default model
+            self._debug_print(f"Using default model: {selected_model}")
 
-        # テキストの分割
+        # Split text into segments if necessary
         segments = self._split_text(text)
+        self._debug_print(f"Text segments: {segments}")
 
-        # 音声合成と保存
+        # Synthesize each segment and collect audio data
         audio_segments = []
         for segment in segments:
             params = self._get_params(segment, self.models_name_map[selected_model])
-            response = requests.get(self.voice_synthesizer_url, params=params)
-            if response.status_code == 200:
+            self._debug_print(f"API parameters: {params}")
+            try:
+                response = requests.get(self.voice_synthesizer_url, params=params)
+                response.raise_for_status()
                 audio_segments.append(response.content)
-            else:
-                raise Exception(f"APIエラー: ステータスコード {response.status_code}")
+                self._debug_print(f"Synthesized segment with length {len(response.content)} bytes")
+            except requests.RequestException as e:
+                raise Exception(f"API request failed: {e}")
 
-        # 音声ファイルの結合と保存
+        # Write the combined audio data to the output file
         with open(save_path, "wb") as f:
             for audio in audio_segments:
                 f.write(audio)
-        print(f"音声ファイルを '{save_path}' に保存しました。")
-    
-    def __get_models_info(self):
-        """
-        モデルの情報を取得します。
-        """
-        response = requests.get(self.models_info_url)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            raise Exception(f"モデル情報の取得に失敗しました。ステータスコード: {response.status_code}")
+        self._debug_print(f"Synthesized audio saved to '{save_path}'")
 
-    def _get_params(self, text: str, model_id: str):
+    def _get_models_info(self) -> dict:
         """
-        API呼び出しに使用するパラメータを生成します。
-
-        Args:
-            text (str): 合成するテキストのセグメント。
-            model_id (str): 使用するモデルのID。
+        Retrieve model information from the API.
 
         Returns:
-            dict: API呼び出しに必要なパラメータの辞書。
+            dict: A dictionary containing model information.
+
+        Raises:
+            Exception: If model information cannot be retrieved.
         """
-        return {
+        try:
+            response = requests.get(self.models_info_url)
+            response.raise_for_status()
+            self._debug_print("Model information retrieved successfully")
+            return response.json()
+        except requests.RequestException as e:
+            raise Exception(f"Failed to retrieve model information: {e}")
+
+    def _get_params(self, text: str, model_id: str) -> dict:
+        """
+        Generate parameters for the API call.
+
+        Args:
+            text (str): The text segment to synthesize.
+            model_id (str): The ID of the model to use.
+
+        Returns:
+            dict: A dictionary of parameters for the API call.
+        """
+        params = {
             "text": text,
             "model_id": model_id,
             "encoding": "utf-8",
@@ -133,39 +164,36 @@ class VoiceSynthesizer:
             "style": "Neutral",
             "style_weight": 5
         }
-    
-    def __find_model_id(self, data, model_name):
-        """
-        data = {
-            `${model_id}` : {
-                "spk2id" : {
-                    `${model_name}` : 0
-                }
-            },
-            ...
-        }
-        
-        """
-        # Iterate through the JSON data
-        for key, value in data.items():
-            # Check if the model_name exists in the "spk2id" keys
-            if model_name in value.get("spk2id", {}):
-                return key
-        return None
+        return params
 
-    def _split_text(self, text: str, max_length: int = 100):
+    def _find_model_id(self, models_info: dict, model_name: str) -> str:
         """
-        テキストを指定された最大長さ以下に分割します。
-
-        分割は、指定された区切り文字（「、」「。」「,」「.」「 」など）の最大インデックスで行います。
-        区切り文字が見つからない場合は、単純に指定された長さで分割します。
+        Find the model ID corresponding to a given model name.
 
         Args:
-            text (str): 分割対象のテキスト。
-            max_length (int, optional): 各セグメントの最大文字数。デフォルトは100。
+            models_info (dict): The dictionary containing models information.
+            model_name (str): The name of the model to find.
 
         Returns:
-            list: 分割されたテキストセグメントのリスト。
+            str: The model ID if found, else None.
+        """
+        for model_id, info in models_info.items():
+            if model_name in info.get("spk2id", {}):
+                return model_id
+        return None
+
+    def _split_text(self, text: str, max_length: int = 100) -> list:
+        """
+        Split text into segments not exceeding max_length characters.
+
+        Splitting occurs at the last occurrence of specified delimiters within the max_length.
+
+        Args:
+            text (str): The text to split.
+            max_length (int): The maximum length of each text segment.
+
+        Returns:
+            list: A list of text segments.
         """
         delimiters = ["、", "。", ",", ".", " ", "　"]
         segments = []
@@ -177,29 +205,43 @@ class VoiceSynthesizer:
                     text = text[index+1:]
                     break
             else:
+                # No delimiter found; force split
                 segments.append(text[:max_length])
                 text = text[max_length:]
         if text:
             segments.append(text)
         return segments
-    
+
     def _debug_print(self, message: str):
+        """
+        Print debug messages if debug mode is enabled.
+
+        Args:
+            message (str): The debug message to print.
+        """
         if self.is_debug:
-            print(message)
+            print(f"[DEBUG] {message}")
 
-    def check_is_server_ready(self):
+    def check_server_ready(self):
         """
-        サーバーが準備されているかを確認します。
-        """
-        response = requests.get(self.doc_url)
-        if response.status_code != 200:
-            raise Exception(f"サーバーが準備されていません。ステータスコード: {response.status_code}")
-        
-        self._debug_print(f"<VoiceSynthesizer.check_is_server_ready> called, response: {response}")
+        Check if the API server is ready.
 
-    def get_usable_models(self):
+        Raises:
+            Exception: If the server is not ready.
         """
-        使用可能なモデルのリストを取得します。
+        try:
+            response = requests.get(self.doc_url)
+            response.raise_for_status()
+            self._debug_print("Server is ready.")
+        except requests.RequestException as e:
+            raise Exception(f"Server is not ready: {e}")
+
+    def get_usable_models(self) -> list:
+        """
+        Get a list of usable models.
+
+        Returns:
+            list: A list of model names.
         """
         return list(self.models_name_map.keys())
 
