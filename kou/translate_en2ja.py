@@ -1,6 +1,7 @@
 import os
 import asyncio
 import json
+from translate_prompt import template
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
@@ -9,21 +10,32 @@ from dotenv import load_dotenv
 from datasets import load_dataset
 
 #VoiceAssistant-400kのデータセットを取得する
-dataset = load_dataset("gpt-omni/VoiceAssistant-400k", split="train")
+#dataset = load_dataset("gpt-omni/VoiceAssistant-400k", split="train")
 
 load_dotenv()
 
 api_key = os.getenv("OPEN_API_KEY")
 
+split_name = "identity"
+#split_name = "qa_assistant_v1_7k"
+
 #`split_name`列の`identity`のデータを抽出したデータセット
-dataset_identity = dataset.filter(lambda example: example["split_name" == "identity"])
+dataset_identity = dataset.filter(lambda example: example["split_name"] == split_name)
+
+print("Extracted Dataset")
 
 #`question`のテキストデータを抽出したリスト
 question_text_list = dataset_identity["question"]
 
-llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0, openai_api_key=api_key)
+"""" `question_assistant_v1_7k`のデータセットを翻訳する時はこっちを使う
+#"qa_assistant_v1_7k"のデータセットを抽出後、10%のデータを抽出
+total_length = len(question_text_list)
+ten_percent_lenght = int(total_length * 0.1)
 
-template = "次の文章を英語から日本語に翻訳してください。{prompt_text}"
+ten_percent_question_text_list = question_text_list[:ten_percent_lenght]
+"""
+
+llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0, openai_api_key=api_key)
 
 prompt = ChatPromptTemplate.from_messages(
     [
@@ -32,7 +44,7 @@ prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-output_parser = StrOutputParser()
+#output_parser = StrOutputParser()
 
 #翻訳結果を保存するリスト
 translated_text_list = []
@@ -40,7 +52,8 @@ translated_text_list = []
 #個々の翻訳処理を定義した関数
 async def translate(text):
     try:
-        chain = LLMChain(llm= llm, prompt= prompt)
+        #chain = LLMChain(llm= llm, prompt= prompt)
+        chain = prompt | llm
         result1 = await chain.arun({"prompt_text": text})
         return result1
     except Exception as e:
@@ -57,11 +70,13 @@ async def mulch_translate(text_list):
 async def translate_text():
     translated_text_list = await mulch_translate(question_text_list)
 
-    #JSONファイルに書き込む
-    with open("translated.json", "w") as f:
-        json.dump(translated_text_list, f, indent= 4)
+    print(translated_text_list)
 
-asyncio.run(translate_text)
+    #JSONファイルに書き込む
+    with open("translated.json", "w", encoding="utf-8") as f:
+        json.dump(translated_text_list, f, indent= 4, ensure_ascii=False)
+
+asyncio.run(translate_text())
 
 """"
 for translate_text in dataset_question:
