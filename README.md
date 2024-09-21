@@ -95,9 +95,31 @@ Speech to Speechの日本語のデータセットを作成するツールです�
     ```sh
     Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
     ```
-- このREADMEは, GPT-4oを使用して作成されました。
+- このREADMEは, GPT-4を使用して作成されました。
+
+## Style-Bert-VITS2のセットアップ
+
+Style-Bert-VITS2の環境を整備するためには、以下の手順に従ってください。
+
+1. [Style-Bert-VITS2のリポジトリ](https://github.com/litagin02/Style-Bert-VITS2?tab=readme-ov-file)を参考に環境を整備します。
+
+2. Style-Bert-VITS2環境で以下のコマンドを実行してAPIサーバーを立ち上げます。
+    ```sh
+    python server_fastapi.py
+    ```
+    または
+    ```sh
+    Server.exe
+    ```
+
+3. テストを実行するには、以下のコマンドを使用します。
+    ```sh
+    pytest -s your/path/test_file.py
+    ```
+
+詳細は、`scripts/synthesis/README.md`を参照してください。
 
 ## Reference
-- ITO Corpus: https://github.com/mmorise/ita-corpus
+- ITA Corpus: https://github.com/mmorise/ita-corpus
 - VoiceAssistant-400K: https://huggingface.co/datasets/gpt-omni/VoiceAssistant-400K
 - Style-Bert-VITS2: https://github.com/litagin02/Style-Bert-VITS2
