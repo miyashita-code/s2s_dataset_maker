@@ -1,7 +1,8 @@
 import os
 import asyncio
 import json
-from translate_prompt import template
+from translate_prompt import TRANSLATE_INSTRUCTION 
+from translate_prompt import SYSTEM_INSTRUCTION 
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
@@ -10,7 +11,7 @@ from dotenv import load_dotenv
 from datasets import load_dataset
 
 #VoiceAssistant-400kのデータセットを取得する
-#dataset = load_dataset("gpt-omni/VoiceAssistant-400k", split="train")
+dataset = load_dataset("gpt-omni/VoiceAssistant-400k", split="train")
 
 load_dotenv()
 
@@ -27,6 +28,7 @@ print("Extracted Dataset")
 #`question`のテキストデータを抽出したリスト
 question_text_list = dataset_identity["question"]
 
+
 """" `question_assistant_v1_7k`のデータセットを翻訳する時はこっちを使う
 #"qa_assistant_v1_7k"のデータセットを抽出後、10%のデータを抽出
 total_length = len(question_text_list)
@@ -35,11 +37,13 @@ ten_percent_lenght = int(total_length * 0.1)
 ten_percent_question_text_list = question_text_list[:ten_percent_lenght]
 """
 
-llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0, openai_api_key=api_key)
+llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, openai_api_key=api_key)
+
+template = "次の文章を英語から日本語に翻訳してください。その際、日本人に馴染みのある表現で、自然な会話のように翻訳してください。{prompt_text}"
 
 prompt = ChatPromptTemplate.from_messages(
     [
-        ("system", "あなたは英日翻訳者です。"),
+        ("system", SYSTEM_INSTRUCTION),
         ("user", template)
     ]
 )
@@ -52,8 +56,7 @@ translated_text_list = []
 #個々の翻訳処理を定義した関数
 async def translate(text):
     try:
-        #chain = LLMChain(llm= llm, prompt= prompt)
-        chain = prompt | llm
+        chain = LLMChain(llm= llm, prompt= prompt)
         result1 = await chain.arun({"prompt_text": text})
         return result1
     except Exception as e:

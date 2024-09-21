@@ -1,2 +1,3 @@
-TRANSLATE_INSTRUCTION = "次の日本語を英語にしてください。"
-template = f"{TRANSLATE_INSTRUCTION} {prompt_text}"
+TRANSLATE_INSTRUCTION = "次の文章を英語から日本語に翻訳してください。その際、日本人に馴染みのある表現で、自然な会話のように翻訳してください。"
+SYSTEM_INSTRUCTION = "あなたは日本語も英語も流暢に話せる英日翻訳者です。"
+

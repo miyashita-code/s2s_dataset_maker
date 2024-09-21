@@ -1,7 +1,8 @@
-"""英語から日本語への翻訳を行うモジュール。
+"""
+英語から日本語への翻訳を行うモジュール。
 
-このモジュールは、与えられた英語のテキストを日本語に翻訳し、
-結果をJSONファイルに保存します。
+このモジュールは、VoiceAssistant-400kデータセットから英語のテキストを抽出し、
+日本語に翻訳して、結果をJSONファイルに保存します。
 """
 
 import os
@@ -13,57 +14,9 @@ from dotenv import load_dotenv
 from datasets import Dataset, load_dataset
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
+from langchain.chains.llm import LLMChain
 
-from translate_prompt import template
-
-
-class Translator:
-    """英語から日本語への翻訳を行うクラス。"""
-
-    def __init__(self, api_key: str, model: str = "gpt-3.5-turbo"):
-        """
-        Translatorクラスのコンストラクタ。
-
-        Args:
-            api_key (str): OpenAI APIキー
-            model (str, optional): 使用する言語モデル。デフォルトは"gpt-3.5-turbo"
-        """
-        self.llm = ChatOpenAI(model=model, temperature=0, openai_api_key=api_key)
-        self.prompt = ChatPromptTemplate.from_messages([
-            ("system", "あなたは英日翻訳者です。"),
-            ("user", template)
-        ])
-
-    async def translate(self, text: str) -> Optional[str]:
-        """
-        単一のテキストを翻訳する。
-
-        Args:
-            text (str): 翻訳する英語のテキスト
-
-        Returns:
-            Optional[str]: 翻訳された日本語のテキスト。エラーの場合はNone
-        """
-        try:
-            chain = self.prompt | self.llm
-            result = await chain.arun({"prompt_text": text})
-            return result
-        except Exception as e:
-            print(f"翻訳エラー: テキスト: {text}, エラー: {e}")
-            return None
-
-    async def batch_translate(self, text_list: List[str]) -> List[Optional[str]]:
-        """
-        複数のテキストを並行して翻訳する。
-
-        Args:
-            text_list (List[str]): 翻訳する英語のテキストのリスト
-
-        Returns:
-            List[Optional[str]]: 翻訳された日本語のテキストのリスト
-        """
-        tasks = [self.translate(text) for text in text_list]
-        return await asyncio.gather(*tasks)
+from translate_prompt import SYSTEM_INSTRUCTION
 
 
 class DatasetHandler:
@@ -109,6 +62,55 @@ class DatasetHandler:
             List[str]: 抽出された質問のリスト
         """
         return dataset["question"]
+
+
+class Translator:
+    """英語から日本語への翻訳を行うクラス。"""
+
+    def __init__(self, api_key: str, model: str = "gpt-4-0125-preview"):
+        """
+        Translatorクラスのコンストラクタ。
+
+        Args:
+            api_key (str): OpenAI APIキー
+            model (str, optional): 使用する言語モデル。デフォルトは"gpt-4-0125-preview"
+        """
+        self.llm = ChatOpenAI(model=model, temperature=0, openai_api_key=api_key)
+        self.prompt = ChatPromptTemplate.from_messages([
+            ("system", SYSTEM_INSTRUCTION),
+            ("user", "次の文章を英語から日本語に翻訳してください。その際、日本人に馴染みのある表現で、自然な会話のように翻訳してください。{prompt_text}")
+        ])
+
+    async def translate(self, text: str) -> Optional[str]:
+        """
+        単一のテキストを翻訳する。
+
+        Args:
+            text (str): 翻訳する英語のテキスト
+
+        Returns:
+            Optional[str]: 翻訳された日本語のテキスト。エラーの場合はNone
+        """
+        try:
+            chain = LLMChain(llm=self.llm, prompt=self.prompt)
+            result = await chain.arun({"prompt_text": text})
+            return result
+        except Exception as e:
+            print(f"翻訳エラー: テキスト: {text}, エラー: {e}")
+            return None
+
+    async def batch_translate(self, text_list: List[str]) -> List[Optional[str]]:
+        """
+        複数のテキストを並行して翻訳する。
+
+        Args:
+            text_list (List[str]): 翻訳する英語のテキストのリスト
+
+        Returns:
+            List[Optional[str]]: 翻訳された日本語のテキストのリスト
+        """
+        tasks = [self.translate(text) for text in text_list]
+        return await asyncio.gather(*tasks)
 
 
 class JSONWriter:
