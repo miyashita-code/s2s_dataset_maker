@@ -3,3 +3,11 @@
 
 # Python のキャッシュファイルを無視
 **/__pycache__/
+__pycache__
+
+# assets bigger than 10MB (audio, image, etc.)
+data/ITA_corpus/s2s_assets
+
+buffer/*
+
+output.wav

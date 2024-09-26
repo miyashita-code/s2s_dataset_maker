@@ -119,6 +119,9 @@ Style-Bert-VITS2の環境を整備するためには、以下の手順に従っ�
 
 詳細は、`scripts/synthesis/README.md`を参照してください。
 
+##
+data\ITA_corpus\ref\ita-corpusはITAコーパス[https://github.com/mmorise/ita-corpus]をcloneしています。
+
 ## Reference
 - ITA Corpus: https://github.com/mmorise/ita-corpus
 - VoiceAssistant-400K: https://huggingface.co/datasets/gpt-omni/VoiceAssistant-400K

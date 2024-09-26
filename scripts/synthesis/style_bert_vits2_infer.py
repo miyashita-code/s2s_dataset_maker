@@ -1,8 +1,10 @@
 import json
 import os
+import io
 import random
 import requests
 
+from pydub import AudioSegment
 from dotenv import load_dotenv
 
 
@@ -16,7 +18,7 @@ class VoiceSynthesizer:
     automatically splits the text before synthesis.
     """
 
-    def __init__(self, is_debug: bool = False):
+    def __init__(self, is_debug: bool = False, silent_interval_ms: int = 300):
         """
         Initialize the VoiceSynthesizer.
 
@@ -31,7 +33,7 @@ class VoiceSynthesizer:
             Exception: If a specified model does not exist or the server is not ready.
         """
         self.is_debug = is_debug
-
+        self.silent_interval_ms = silent_interval_ms
         # Load environment variables
         load_dotenv()
 
@@ -101,22 +103,29 @@ class VoiceSynthesizer:
         self._debug_print(f"Text segments: {segments}")
 
         # Synthesize each segment and collect audio data
-        audio_segments = []
-        for segment in segments:
+        combined_audio = AudioSegment.empty()
+        silent_segment = AudioSegment.silent(duration=self.silent_interval_ms)  # 無音
+        for idx, segment in enumerate(segments):
             params = self._get_params(segment, self.models_name_map[selected_model])
             self._debug_print(f"API parameters: {params}")
             try:
                 response = requests.get(self.voice_synthesizer_url, params=params)
                 response.raise_for_status()
-                audio_segments.append(response.content)
+                audio_segment = AudioSegment.from_file(io.BytesIO(response.content), format="wav")
+                combined_audio += audio_segment
                 self._debug_print(f"Synthesized segment with length {len(response.content)} bytes")
+                
+                # 最後のセグメント以外には無音区間を追加
+                if idx < len(segments) - 1:
+                    combined_audio += silent_segment
+                    self._debug_print(f"Inserted a {self.silent_interval_ms} mili second silent interval.")
             except requests.RequestException as e:
                 raise Exception(f"API request failed: {e}")
+            except Exception as e:
+                raise Exception(f"Audio data processing failed: {e}")
 
         # Write the combined audio data to the output file
-        with open(save_path, "wb") as f:
-            for audio in audio_segments:
-                f.write(audio)
+        combined_audio.export(save_path, format="wav")
         self._debug_print(f"Synthesized audio saved to '{save_path}'")
 
     def _get_models_info(self) -> dict:
@@ -155,14 +164,15 @@ class VoiceSynthesizer:
             "speaker_id": 0,
             "sdp_ratio": 0.2,
             "noise": 0.5,
-            "noisew": 0.7,
+            "noisew": 0.6,
             "length": 1.0,
             "language": "JP",
-            "auto_split": False,
+            "auto_split": True,
+            "split_interval": self.silent_interval_ms / 1000,
             "assist_text": "",
             "assist_text_weight": 1,
             "style": "Neutral",
-            "style_weight": 5
+            "style_weight": 1
         }
         return params
 
@@ -186,7 +196,8 @@ class VoiceSynthesizer:
         """
         Split text into segments not exceeding max_length characters.
 
-        Splitting occurs at the last occurrence of specified delimiters within the max_length.
+        If no specified delimiters are found, the method will forcibly split at max_length.
+        This ensures that all segments are within the max_length limit, handling potential errors.
 
         Args:
             text (str): The text to split.
@@ -197,19 +208,21 @@ class VoiceSynthesizer:
         """
         delimiters = ["、", "。", ",", ".", " ", "　"]
         segments = []
-        while len(text) > max_length:
+        while text:
+            if len(text) <= max_length:
+                segments.append(text)
+                break
+            
+            split_index = max_length
             for delim in reversed(delimiters):
                 index = text.rfind(delim, 0, max_length)
                 if index != -1:
-                    segments.append(text[:index+1])
-                    text = text[index+1:]
+                    split_index = index + 1
                     break
-            else:
-                # No delimiter found; force split
-                segments.append(text[:max_length])
-                text = text[max_length:]
-        if text:
-            segments.append(text)
+            
+            segments.append(text[:split_index])
+            text = text[split_index:]
+        
         return segments
 
     def _debug_print(self, message: str):
