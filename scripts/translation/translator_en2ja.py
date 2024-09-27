@@ -8,9 +8,10 @@
 import os
 import asyncio
 import json
+import torch
 from typing import List, Optional
 
-from dotenv import load_dotenv
+from dotenv import load_dotenv  
 from datasets import Dataset, load_dataset
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
@@ -63,6 +64,18 @@ class DatasetHandler:
         """
         return dataset["question"]
 
+    @staticmethod
+    def extract_snac_tokens(dataset: Dataset) -> List[torch.Tensor]:
+        """
+        データセットからSNACトークンを抽出する。
+
+        Args:
+            dataset (Dataset): SNACトークンを抽出するデータセット
+
+        Returns:
+            List[str]: 抽出されたSNACトークンのリスト
+        """
+        return dataset["answer_snac"]
 
 class Translator:
     """英語から日本語への翻訳を行うクラス。"""
