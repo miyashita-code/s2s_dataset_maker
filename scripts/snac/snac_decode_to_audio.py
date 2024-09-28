@@ -1,9 +1,8 @@
 from snac import SNAC
 from snac_utils import reconstruct_snac, reconstruct_tensors, generate_audio_data, log_device_info
+from scripts.utils.HF_dataset import DatasetHandler
 import torch
 import torchaudio
-
-from translator_module import DatasetHandler
 
 import soundfile as sf
 
