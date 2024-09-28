@@ -75,3 +75,5 @@ class SNACDecoder:
             audio_hat.squeeze().cpu().numpy(),
             24000,
         )
+
+        print(f"音声データを{output_path}に保存しました。")
