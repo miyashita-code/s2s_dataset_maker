@@ -9,5 +9,7 @@ __pycache__
 data/ITA_corpus/s2s_assets
 
 buffer/*
+test_results.json
 
-output.wav
+# audio file
+*.wav
