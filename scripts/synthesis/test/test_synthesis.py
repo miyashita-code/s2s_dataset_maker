@@ -1,6 +1,7 @@
 import os
 import sys
 import pytest
+import pathlib
 
 sys.path.insert(0, './')
 
@@ -21,11 +22,11 @@ def sample_text():
     return "これはテストです。音声合成が正しく動作するか確認します。"
 
 @pytest.fixture
-def save_path(tmp_path):
+def save_path():
     """
     Provides a temporary path for saving synthesized audio.
     """
-    return tmp_path / "test_output.wav"
+    return pathlib.Path("buffer/systhesis_test_outputs/test_output.wav")
 
 class TestVoiceSynthesizer:
     """
@@ -78,3 +79,25 @@ class TestVoiceSynthesizer:
         )
         assert save_path.exists()
         os.remove(save_path)
+
+    def test_long_jp_text(self, synthesizer, save_path):
+        """
+        Test synthesizing long Japanese text and checking if the file is saved correctly.
+        """
+        long_text = """
+            こんにちわ。
+            私はオムニです。
+            リアルタイムでの対話が得意なユニークな音声アシスタントです。
+            質問への回答から複雑なソリューションの提供まで、
+            幅広い言語タスクに対応できます。
+            他のアシスタントモデルとは異なり、
+            私は高度なハードウェアで訓練されており、
+            音声を使った推論能力やタイムリーで正確な応答が強化されています。"""
+        
+        synthesizer.synthesize(
+            text=long_text,
+            save_path=str(save_path)
+        )
+        assert save_path.exists()
+        #os.remove(save_path)
+
