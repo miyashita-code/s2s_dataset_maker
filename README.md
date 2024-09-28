@@ -16,6 +16,8 @@ Speech to Speechの日本語のデータセットを作成するツールです�
     choco install pyenv-win
     ```
 
+    ffmpeg
+
 3. Python 3.10.0をインストールし、グローバルに設定します。
     ```sh
     pyenv install 3.10.0
