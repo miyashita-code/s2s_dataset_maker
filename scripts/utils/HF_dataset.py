@@ -49,3 +49,16 @@ class DatasetHandler:
             List[str]: 抽出された質問のリスト
         """
         return dataset["question"]
+    
+    @staticmethod
+    def extract_snac_tokens(dataset: Dataset) -> List[torch.Tensor]:
+        """
+        データセットからSNACトークンを抽出する。
+
+        Args:
+            dataset (Dataset): SNACトークンを抽出するデータセット
+
+        Returns:
+            List[str]: 抽出されたSNACトークンのリスト
+        """
+        return dataset["answer_snac"]
