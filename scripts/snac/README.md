@@ -89,7 +89,7 @@ if __name__ == "__main__":
 
 ## 注意事項
 
-- 音声ファイルの入力先は、`input.wav` です。テスト用の音声ファイルは、`data/test_input_audio.wav` もしくは `data/test_input_audio2.wav` です。
+- 音声ファイルの入力先は、`input.wav` です。必要に応じて変更してください。
 - 出力先の音声ファイルは、`output.wav` です。必要に応じて変更してください。
 - 動作するコードは、`sample_encode.py` にあります。
 
