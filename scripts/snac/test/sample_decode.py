@@ -20,6 +20,7 @@ snac_tokens = DatasetHandler.extract_snac_tokens(filtered_dataset)
 
 #SNACトークンをデコードように調整する
 snac_token_list = parse_snac_tokens(snac_tokens[0])
+print(snac_token_list)
 
 # デバイスの指定
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

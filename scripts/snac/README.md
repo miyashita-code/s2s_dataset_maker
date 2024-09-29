@@ -1,9 +1,8 @@
-# SNACデコーダーモジュールの使用方法
-
-このモジュールは、SNACトークンを音声データにデコードする機能を提供します。Hugging Faceからデータセットをロードし、SNACトークンを抽出して音声ファイルを生成します。
+# SNACモジュールの使用方法
 
 ## SNACDecoderクラスの概要
 
+このモジュールは、SNACトークンを音声データにデコードする機能を提供します。Hugging Faceからデータセットをロードし、SNACトークンを抽出して音声ファイルを生成します。
 `SNACDecoder`クラスは、以下の主要なメソッドを提供します：
 
 - `parse_snac_tokens`: SNACトークンの文字列を解析し、リストに分割します。
@@ -48,6 +47,50 @@ if __name__ == "__main__":
 ## 注意事項
 
 - 音声ファイルの出力先は、`output.wav` です。必要に応じて変更してください。
-- 動作するコードは、`test_decode.py` にあります。
+- 動作するコードは、`sample_decode.py` にあります。
 
-このREADMEは、`SNACDecoder`クラスの主要な機能と使用方法を説明しています。
+
+## SNACEncoderクラスの概要
+
+このモジュールは、音声データをSNACトークンにエンコードする機能を提供します。音声ファイルを読み込み、SNACトークンを生成します。
+
+`SNACEncoder`クラスは、以下の主要なメソッドを提供します：
+
+- `encode_to_tokens`: 音声ファイルを処理し、SNACトークンにエンコードします。
+- `decode_from_tokens`: SNACトークンを音声データにデコードし、ファイルに保存します。
+
+## 使用例
+
+### 単発エンコードの使用例
+
+音声ファイルをSNACトークンにエンコードする方法です。
+
+```python
+from scripts.snac.snac_module import SNACEncoder
+
+# 入力する音声ファイルのパス
+audio_path = "input.wav"
+# 出力する音声ファイルのパス
+output_path = "output.wav"
+
+def main():
+    # エンコーダーを初期化
+    encoder = SNACEncoder(audio_path, output_path)
+
+    # SNACトークンにエンコード
+    tokens = encoder.encode_to_tokens()
+
+    # トークンを音声データにデコードし、ファイルに保存
+    encoder.decode_from_tokens(tokens)
+
+if __name__ == "__main__":
+    main()
+```
+
+## 注意事項
+
+- 音声ファイルの入力先は、`input.wav` です。テスト用の音声ファイルは、`data/test_input_audio.wav` もしくは `data/test_input_audio2.wav` です。
+- 出力先の音声ファイルは、`output.wav` です。必要に応じて変更してください。
+- 動作するコードは、`sample_encode.py` にあります。
+
+このREADMEは、`SNACEncoder`クラスと`SNACDecoder`クラスの主要な機能と使用方法を説明しています。

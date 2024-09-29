@@ -206,7 +206,7 @@ class VoiceSynthesizer:
         Returns:
             list: A list of text segments.
         """
-        delimiters = ["、", "。", ",", ".", " ", "　"]
+        delimiters = ["、", "。", ",", ".", " ", " "]
         segments = []
         while text:
             if len(text) <= max_length:

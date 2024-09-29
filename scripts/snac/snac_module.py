@@ -1,5 +1,6 @@
 import torch
 import soundfile as sf
+import torchaudio
 from snac import SNAC
 from scripts.utils.snac_utils import generate_audio_data, log_device_info
 
@@ -77,3 +78,50 @@ class SNACDecoder:
         )
 
         print(f"音声データを{output_path}に保存しました。")
+
+class SNACEncoder:
+    """
+    音声ファイルをSNACトークンにエンコードするクラス。
+    """
+
+    def __init__(self, audio_path: str, output_path: str):
+        """
+        初期化メソッド。
+
+        :param audio_path: 読み込む音声ファイルのパス
+        :param output_path: 出力する音声ファイルのパス
+        """
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model = SNAC.from_pretrained("hubertsiuzdak/snac_44khz").eval().to(self.device)
+        self.audio_path = audio_path
+        self.output_path = output_path
+
+    def encode_to_tokens(self):
+        """
+        音声ファイルを処理し、エンコードおよびデコードを行うメソッド。
+        """
+        # 音声ファイルを読み込み
+        waveform, sample_rate = torchaudio.load(self.audio_path)
+        waveform = waveform.unsqueeze(0).to(self.device)  # バッチ次元を追加してGPUに転送
+
+        # モデルを使用してエンコード
+        with torch.inference_mode():
+            tokens = self.model.encode(waveform)
+        
+        return tokens
+
+    def decode_from_tokens(self, tokens):
+        """
+        トークンを音声データにデコードする。
+        """
+        with torch.inference_mode():
+            audio_hat = self.model.decode(tokens)
+
+        # 生成された音声データをファイルに保存する
+        sf.write(
+            self.output_path,
+            audio_hat.squeeze().cpu().numpy(),
+            44100,
+        )
+
+        print(f"音声データを{self.output_path}に保存しました。")
