@@ -3,7 +3,7 @@ import pytest
 from scripts.snac.snac_module import SNACEncoder
 
 # テスト用の音声ファイルのパス
-AUDIO_PATH = "data/test_input_audio.wav"
+AUDIO_PATH = "data/test_input_audio2.wav"
 OUTPUT_PATH = "data/test_output_tokens.wav"
 
 @pytest.fixture

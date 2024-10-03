@@ -13,14 +13,14 @@ class SNACDecoder:
     音声データを生成し、指定されたパスに保存します。
     """
 
-    def __init__(self, model_name: str = "hubertsiuzdak/snac_24khz"):
+    def __init__(self):
         """
         クラスの初期化メソッド。
 
         Args:
             model_name (str, optional): 使用するSNACモデルの名前。デフォルトは "hubertsiuzdak/snac_24khz"。
         """
-        self.model_name = model_name
+        self.model_name = "hubertsiuzdak/snac_44khz"
         self.device = self._setup_device()
         self.snac_model = self._load_model()
 
@@ -59,7 +59,7 @@ class SNACDecoder:
         """
         return input_str.split(" ")
 
-    def decode_to_audio(self, snac_tokens: list, output_path: str) -> None:
+    def decode_to_audio_44kHz(self, snac_tokens: list, output_path: str) -> None:
         """
         SNACトークンを音声データにデコードし、ファイルに保存する。
 
@@ -69,6 +69,28 @@ class SNACDecoder:
         """
         # SNACトークンから音声データを生成する
         audio_hat = generate_audio_data(snac_tokens, self.snac_model, self.device)
+
+        # 生成された音声データをファイルに保存する
+        sf.write(
+            output_path,
+            audio_hat.squeeze().cpu().numpy(),
+            44100,
+        )
+
+        print(f"音声データを{output_path}に保存しました。")
+    
+    def decode_to_audio_24kHz(self, snac_tokens: list, output_path: str) -> None:
+        """
+        SNACトークンを音声データにデコードし、ファイルに保存する。
+
+        Args:
+            snac_tokens (list): デコードするSNACトークンのリスト。
+            output_path (str): 出力する音声ファイルのパス。
+        """
+
+        snacmodel = SNAC.from_pretrained("hubertsiuzdak/snac_24khz").eval().to(self.device)
+        # SNACトークンから音声データを生成する
+        audio_hat = generate_audio_data(snac_tokens, snacmodel, self.device)
 
         # 生成された音声データをファイルに保存する
         sf.write(
@@ -84,7 +106,7 @@ class SNACEncoder:
     音声ファイルをSNACトークンにエンコードするクラス。
     """
 
-    def __init__(self, audio_path: str, output_path: str):
+    def __init__(self):
         """
         初期化メソッド。
 
@@ -93,35 +115,68 @@ class SNACEncoder:
         """
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = SNAC.from_pretrained("hubertsiuzdak/snac_44khz").eval().to(self.device)
-        self.audio_path = audio_path
-        self.output_path = output_path
 
-    def encode_to_tokens(self):
+    def encode_to_tokens(self, audio_path: str):
         """
-        音声ファイルを処理し、エンコードおよびデコードを行うメソッド。
+        音声ファイルを処理し、エンコードを行うメソッド。
         """
         # 音声ファイルを読み込み
-        waveform, sample_rate = torchaudio.load(self.audio_path)
+        waveform, sample_rate = torchaudio.load(audio_path)
         waveform = waveform.unsqueeze(0).to(self.device)  # バッチ次元を追加してGPUに転送
+        log_device_info(self.device)
+
 
         # モデルを使用してエンコード
         with torch.inference_mode():
             tokens = self.model.encode(waveform)
         
         return tokens
-
-    def decode_from_tokens(self, tokens):
+    
+    # テンソルのリストを一つの文字列に変換する関数
+    def make_snac_tokens(self, tensor_list:list):
         """
-        トークンを音声データにデコードする。
+        音声からエンコードされたトークンを、データセット用に再構築するメソッド
         """
-        with torch.inference_mode():
-            audio_hat = self.model.decode(tokens)
+        flattened_output = []
 
-        # 生成された音声データをファイルに保存する
-        sf.write(
-            self.output_path,
-            audio_hat.squeeze().cpu().numpy(),
-            44100,
-        )
+        # 各テンソルから値を取り出してリストに格納
+        tensor1_values = tensor_list[0].cpu().tolist()[0]  # 28個の要素
+        tensor2_values = tensor_list[1].cpu().tolist()[0]  # 56個の要素
+        tensor3_values = tensor_list[2].cpu().tolist()[0]  # 112個の要素
+        tensor4_values = tensor_list[3].cpu().tolist()[0]  # 224個の要素
 
-        print(f"音声データを{self.output_path}に保存しました。")
+        idx_t1 = 0
+        idx_t2 = 0
+        idx_t3 = 0
+        idx_t4 = 0
+
+        max_iterations = 28  # ループ回数を28回に設定
+
+        for _ in range(max_iterations):
+            flattened_output.extend([
+                '#',
+                str(tensor1_values[idx_t1]),
+                str(tensor2_values[idx_t2]),
+                str(tensor3_values[idx_t3]),
+                str(tensor4_values[idx_t4]),
+                str(tensor4_values[idx_t4 + 1]),
+                str(tensor3_values[idx_t3 + 1]),
+                str(tensor4_values[idx_t4 + 2]),
+                str(tensor4_values[idx_t4 + 3]),
+                str(tensor2_values[idx_t2 + 1]),
+                str(tensor3_values[idx_t3 + 2]),
+                str(tensor4_values[idx_t4 + 4]),
+                str(tensor4_values[idx_t4 + 5]),
+                str(tensor3_values[idx_t3 + 3]),
+                str(tensor4_values[idx_t4 + 6]),
+                str(tensor4_values[idx_t4 + 7]),
+            ])
+
+            idx_t1 += 1
+            idx_t2 += 2
+            idx_t3 += 4
+            idx_t4 += 8
+
+        # flattened_outputリストをスペースで区切って1つの文字列に変換
+        result_string = ' '.join(flattened_output)
+        return result_string
