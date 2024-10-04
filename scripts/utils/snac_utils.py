@@ -31,6 +31,7 @@ def layershift(input_id, layer, stride=4160, shift=152000):
 
 def generate_audio_data(snac_tokens, snacmodel, device=None):
     audio = reconstruct_tensors(snac_tokens, device)
+    print("output_tensor", audio)
     with torch.inference_mode():
         audio_hat = snacmodel.decode(audio)
     return audio_hat
@@ -74,6 +75,7 @@ def reconstruct_tensors(flattened_output, device=None):
             second_index = lst.index("#", first_index + 1)
             # Count the elements between the two indices
             return second_index - first_index - 1
+        
         except ValueError:
             # Handle the case where there aren't enough '#' symbols
             return "List does not contain two '#' symbols"
@@ -84,6 +86,7 @@ def reconstruct_tensors(flattened_output, device=None):
             first_hash_index = flattened_list.index("#")
             # Return the list starting from the first '#'
             return flattened_list[first_hash_index:]
+
         except ValueError:
             # Handle the case where there is no '#'
             return "List does not contain the symbol '#'"

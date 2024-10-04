@@ -5,6 +5,9 @@
 **/__pycache__/
 __pycache__
 
+# Pytest のキャッシュファイルを無視
+.pytest_cache/
+
 # assets bigger than 10MB (audio, image, etc.)
 data/ITA_corpus/s2s_assets
 
