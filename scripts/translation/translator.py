@@ -1,4 +1,5 @@
 import asyncio
+import json
 from typing import List, Optional
 from abc import ABC, abstractmethod
 
@@ -80,7 +81,7 @@ class BaseTranslator(ABC):
             else:
                 return await self.translate(text, is_retry=True)
 
-    async def batch_translate(self, texts: List[str], max_size: int = 100) -> List[Optional[str]]:
+    async def batch_translate(self, texts: List[str], max_size: int) -> List[Optional[str]]:
         """
         複数のテキストを並列で翻訳します。ただし、指定されたmax_sizeごとにバッチを分割し、
         各バッチ内は並列、バッチ間は直列に処理します。
@@ -100,8 +101,10 @@ class BaseTranslator(ABC):
             # バッチ内は並列に実行
             batch_results = await asyncio.gather(*tasks)
             results.extend(batch_results)
-        return results
 
+            JSONWriter.write_to_json(batch_results, filename="spoken_translated.json")
+        
+        return results
 
 class EnglishToJapaneseTranslator(BaseTranslator):
     """英語から日本語への翻訳を行うクラス"""
@@ -164,7 +167,7 @@ class Translator:
 
         Args:
             api_key (str): OpenAI APIキー
-            model (str): 使用する言語モデル（デフォルト: "gpt-4o-mini"）
+            model (str): 使用する言語モデル（デフォルト: "gpt-4o-mini")
         """
         self.en2ja_translator = EnglishToJapaneseTranslator(api_key, model)
         self.text2spoken_translator = TextToSpokenTranslator(api_key, model)
@@ -182,7 +185,7 @@ class Translator:
         """
         return await self.en2ja_translator.translate(english_text)
 
-    async def batch_translate_en2ja(self, texts: List[str], max_size: int = 100) -> List[Optional[str]]:
+    async def batch_translate_en2ja(self, texts: List[str], max_size: int) -> List[Optional[str]]:
         """
         複数の英語テキストを並列で日本語に翻訳します。ただし、max_sizeごとにバッチを分割します。
 
@@ -207,7 +210,7 @@ class Translator:
         """
         return await self.text2spoken_translator.translate(writing_text)
 
-    async def batch_translate_text2spoken(self, texts: List[str], max_size: int = 100) -> List[Optional[str]]:
+    async def batch_translate_text2spoken(self, texts: List[str], max_size: int) -> List[Optional[str]]:
         """
         複数の書き言葉テキストを並列で話し言葉スタイルに変換します。ただし、max_sizeごとにバッチを分割します。
 
@@ -232,7 +235,7 @@ class Translator:
         """
         return await self.text2spoken_with_filler_translator.translate(writing_text)
     
-    async def batch_translate_text2spoken_with_filler(self, texts: List[str], max_size: int = 100) -> List[Optional[str]]:
+    async def batch_translate_text2spoken_with_filler(self, texts: List[str], max_size: int) -> List[Optional[str]]:
         """
         複数の書き言葉テキストを並列でフィラーを含む口語スタイルに変換します。ただし、max_sizeごとにバッチを分割します。
 
@@ -244,3 +247,30 @@ class Translator:
             List[Optional[str]]: フィラーを含む口語スタイルに変換されたテキストのリスト
         """
         return await self.text2spoken_with_filler_translator.batch_translate(texts, max_size=max_size)
+    
+class JSONWriter:
+    """JSONファイルへの書き込みを行うクラス。"""
+
+    @staticmethod
+    def write_to_json(data: List[str], filename: str):
+        """
+        データをJSONファイルに書き込む。
+
+        Args:
+            data (List[Optional[str]]): 書き込むデータ
+            filename (str): 出力するJSONファイルの名前
+        """
+        existing_data = []
+        try:
+            with open(filename, "r", encoding="utf-8") as f:
+                existing_data = json.load(f)
+        except FileNotFoundError:
+            # ファイルが存在しない場合は新規作成
+            existing_data = []
+
+        # 新しい結果を追加（Noneはnullとして扱う）
+        existing_data.extend([item if item is not None else None for item in data])
+        with open(filename, "w", encoding="utf-8") as f:
+            json.dump(existing_data, f, ensure_ascii=False, indent=4)
+
+        print("JSONファイルへの書き込みが完了しました")
