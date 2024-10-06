@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from dotenv import load_dotenv  
 from datasets import Dataset, load_dataset
-class DatasetHandler:
+class DatasetModule:
     """データセットの処理を行うクラス。"""
 
     @staticmethod
@@ -62,3 +62,21 @@ class DatasetHandler:
             List[str]: 抽出されたSNACトークンのリスト
         """
         return dataset["answer_snac"]
+    
+    @staticmethod
+    def extract_answers(dataset: Dataset) -> List[torch.Tensor]:
+        """
+        データセットから回答テキストを抽出する。
+
+        Args:
+            dataset (Dataset): SNACトークンを抽出するデータセット
+
+        Returns:
+            List[str]: 抽出されたSNACトークンのリスト
+        """
+        return dataset["answer"]
+    
+    def load_text_from_json(self, filename: str) -> List[str]:
+        with open(filename, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data  # List[str]として返す

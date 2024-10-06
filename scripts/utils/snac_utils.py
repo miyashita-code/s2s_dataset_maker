@@ -31,7 +31,7 @@ def layershift(input_id, layer, stride=4160, shift=152000):
 
 def generate_audio_data(snac_tokens, snacmodel, device=None):
     audio = reconstruct_tensors(snac_tokens, device)
-    print("output_tensor", audio)
+    #print("output_tensor", audio)
     with torch.inference_mode():
         audio_hat = snacmodel.decode(audio)
     return audio_hat
