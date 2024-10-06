@@ -26,7 +26,7 @@ def save_path():
     """
     Provides a temporary path for saving synthesized audio.
     """
-    return pathlib.Path("buffer/systhesis_test_outputs/test_output.wav")
+    return pathlib.Path("buffer/systhesis_test_outputs/output.wav")
 
 class TestVoiceSynthesizer:
     """
@@ -96,7 +96,8 @@ class TestVoiceSynthesizer:
         
         synthesizer.synthesize(
             text=long_text,
-            save_path=str(save_path)
+            save_path=str(save_path),
+            model=list(synthesizer.models_name_map.keys())[3]
         )
         assert save_path.exists()
         #os.remove(save_path)

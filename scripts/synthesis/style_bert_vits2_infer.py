@@ -158,19 +158,19 @@ class VoiceSynthesizer:
             dict: A dictionary of parameters for the API call.
         """
         params = {
-            "text": text,
+            "text": text.replace(" ", "").replace("、", "、\n").replace("。", "。\n").replace(",", ",\n").replace(".", ".\n").replace(" ", " \n"),
             "model_id": model_id,
             "encoding": "utf-8",
             "speaker_id": 0,
             "sdp_ratio": 0.2,
             "noise": 0.5,
             "noisew": 0.6,
-            "length": 1.0,
+            "length": 1.05,
             "language": "JP",
             "auto_split": True,
             "split_interval": self.silent_interval_ms / 1000,
-            "assist_text": "",
-            "assist_text_weight": 1,
+            "assist_text": "明るく好印象な感じでハキハキと話してください！怒った感じに聞こえないように注意してください！わくわくで幸せ！語尾をものすごく柔らかく優しく発声してください。",
+            "assist_text_weight": 0.75,
             "style": "Neutral",
             "style_weight": 1
         }
