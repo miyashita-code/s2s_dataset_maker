@@ -22,36 +22,45 @@ class Dataset:
         self.encoder = SNACEncoder()
         self.decoder = SNACDecoder()
 
-    async def translate_texts(self, texts):
+    async def translate_texts(self, texts, filename):
         """
         テキストの翻訳を行う共通メソッド
         """
         translated_text = await self.translator.batch_translate_en2ja(texts, max_size=10)
-        speech_text = await self.translator.batch_translate_text2spoken_with_filler(translated_text, maxsize=5)
-        results = JSONWriter.write_to_json(speech_text, filename="spoken_translated.json")
+        #await asyncio.sleep(5)
+        speech_text = await self.translator.batch_translate_text2spoken_with_filler(translated_text, max_size=10)
+        #await asyncio.sleep(10)
+        results = JSONWriter.write_to_json(speech_text, filename=filename)
+        print(f"{filename}の書き込みが完了しました。")
         return results
 
-    def translation(self):
+    async def translation(self):
         """
         データセットの "question" と "answer を作成します
         """
+
+        # データセットの読み込み
+        dataset = self.dataset_module.load_dataset("gpt-omni/VoiceAssistant-400k")
+        filter_dataset = self.dataset_module.filter_dataset(dataset, "identity")
+
         async def translate_question():
             #データセットの読み込む
-            dataset = self.dataset_module.load_dataset("gpt-omni/VoiceAssistant-400k")
-            filter_dataset = self.dataset_module.filter_dataset(dataset, "identity")
-            questions = self.dataset_module.extract_questions(filter_dataset)
+            questions = self.dataset_module.extract_questions(filter_dataset[1200:1500])
 
-            return await self.translate_texts(questions)
+            return await self.translate_texts(questions, filename="dataset_questions.json")
 
         async def translate_answer():
             #データセットの読み込む
-            dataset = self.dataset_module.load_dataset("gpt-omni/VoiceAssistant-400k")
-            filter_dataset = self.dataset_module.filter_dataset(dataset, "identity")
-            answers = self.dataset_module.extract_answers(filter_dataset)
+            answers = self.dataset_module.extract_answers(filter_dataset[1200:1500])
 
-            return await self.translate_texts(answers)
+            return await self.translate_texts(answers, filename="dataset_answers.json")
+    
+        await translate_question()
+        print("質問テキストを翻訳しました")
+        await translate_answer()
+        print("回答テキストを翻訳しました")
         
-    def audio_maker(self):
+    async def audio_maker(self, filename):
         async def synthesize_audio(text, index, audio_paths):
             """
             音声合成を行う非同期関数
@@ -64,7 +73,7 @@ class Dataset:
             self.synthesizer.synthesize(text, save_path,  "jvnv-M2-jp")
             return save_path  # 保存先のパスを返す
 
-        async def audio_maker(filename: str):
+        async def make_audio(filename: str):
             """
             音声合成を行うメイン関数
 
@@ -91,7 +100,10 @@ class Dataset:
             self.jsonwriter.write_to_json(audio_paths, "audio_path.json")
 
             return results
-        
+            
+         # make_audioを呼び出す
+        await make_audio(filename)
+
     def snac_encode(self):
         """
         データセットの "answer_snac"を作成する

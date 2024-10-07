@@ -8,8 +8,8 @@ async def main():
     await dataset.translation()
 
     """
-    # 音声合成を実行する場合は、音声合成したいテキストのJSONファイル名を指定
-    audio_filename = "spoken_translated.json"
+    #音声合成を実行する場合は、音声合成したいテキストのJSONファイル名を指定
+    audio_filename = "dataset_answers.json"
     await dataset.audio_maker(audio_filename)
 
     # SNACエンコードを実行する場合は、音声ファイルのパスを指定

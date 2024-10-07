@@ -12,7 +12,7 @@ from .prompts import (
     translate_en2ja_system_prompt,
     translate_text2spoken_prompt, 
     translate_text2spoken_system_prompt, 
-    translate_text2spoken_filler_system_prompt
+    get_translate_text2spoken_filler_system_prompt
 )
 
 
@@ -102,7 +102,8 @@ class BaseTranslator(ABC):
             batch_results = await asyncio.gather(*tasks)
             results.extend(batch_results)
 
-            JSONWriter.write_to_json(batch_results, filename="spoken_translated.json")
+            await asyncio.sleep(5)
+            #JSONWriter.write_to_json(batch_results, filename="spoken_translated.json")
         
         return results
 
@@ -142,7 +143,7 @@ class TextToSpokenWithFillerTranslator(BaseTranslator):
     def _create_prompt(self) -> ChatPromptTemplate:
         """フィラーを含む口語翻訳用のChatPromptTemplateを作成します。"""
         return ChatPromptTemplate.from_messages([
-            ("system", translate_text2spoken_filler_system_prompt),
+            ("system", get_translate_text2spoken_filler_system_prompt()),
             ("user", translate_text2spoken_prompt)
         ])
     

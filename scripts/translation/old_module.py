@@ -17,8 +17,6 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from langchain.chains.llm import LLMChain
 
-from translate_prompt import SYSTEM_INSTRUCTION
-
 
 class DatasetHandler:
     """データセットの処理を行うクラス。"""
@@ -90,7 +88,7 @@ class Translator:
         """
         self.llm = ChatOpenAI(model=model, temperature=0, openai_api_key=api_key)
         self.prompt = ChatPromptTemplate.from_messages([
-            ("system", SYSTEM_INSTRUCTION),
+            ("system", "あなたは優秀な英日翻訳かです。"),
             ("user", "次の文章を英語から日本語に翻訳してください。その際、日本人に馴染みのある表現で、自然な会話のように翻訳してください。{prompt_text}")
         ])
 
@@ -105,8 +103,8 @@ class Translator:
             Optional[str]: 翻訳された日本語のテキスト。エラーの場合はNone
         """
         try:
-            chain = LLMChain(llm=self.llm, prompt=self.prompt)
-            result = await chain.arun({"prompt_text": text})
+            chain = self.llm | self.prompt
+            result = await chain.invoke({"prompt_text": text})
             return result
         except Exception as e:
             print(f"翻訳エラー: テキスト: {text}, エラー: {e}")
@@ -119,10 +117,16 @@ class Translator:
         Args:
             text_list (List[str]): 翻訳する英語のテキストのリスト
 
+        max_size: int = 100: 一度に翻訳するテキストの最大数
+
         Returns:
             List[Optional[str]]: 翻訳された日本語のテキストのリスト
         """
-        tasks = [self.translate(text) for text in text_list]
+        max_size = 100  # デフォルトのmax_sizeを設定
+        tasks = []
+        for i in range(0, len(text_list), max_size):
+            batch = text_list[i:i + max_size]
+            tasks.extend([self.translate(text) for text in batch])        
         return await asyncio.gather(*tasks)
 
 
@@ -146,7 +150,7 @@ async def main():
     """メイン関数。翻訳処理の全体の流れを制御する。"""
     # 環境変数の読み込み
     load_dotenv()
-    api_key = os.getenv("OPEN_API_KEY")
+    api_key = os.getenv("OPENAI_API_KEI")
 
     # データセットの準備
     dataset = DatasetHandler.load_dataset("gpt-omni/VoiceAssistant-400k")
