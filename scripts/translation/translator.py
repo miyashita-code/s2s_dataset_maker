@@ -102,8 +102,7 @@ class BaseTranslator(ABC):
             batch_results = await asyncio.gather(*tasks)
             results.extend(batch_results)
 
-            await asyncio.sleep(5)
-            #JSONWriter.write_to_json(batch_results, filename="spoken_translated.json")
+            await asyncio.sleep(10)
         
         return results
 
