@@ -150,7 +150,7 @@ class SNACEncoder:
         idx_t3 = 0
         idx_t4 = 0
 
-        max_iterations = 28  # ループ回数を28回に設定
+        max_iterations = len(tensor1_values)  # ループ回数を28回に設定
 
         for _ in range(max_iterations):
             flattened_output.extend([
